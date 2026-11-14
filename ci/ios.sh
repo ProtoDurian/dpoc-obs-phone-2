@@ -59,7 +59,10 @@ bun "$ROOT/tools/fold-sample.ts" "$R/sample-sampler-1.txt" "$P/sample-ios.folded
 bun "$ROOT/tools/push-folded.ts" "$P/sample-ios.folded" spike-shop "source=macos_sample,platform=ios_sim,build_mode=$SIM_MODE" samples 1000 | tee -a "$R/ios-steps.txt"
 xcrun simctl terminate "$UDID" $BID 2>/dev/null; sleep 1; launch xctrace-1 normal
 pid=$(grep -o '[0-9]*$' "$R/launch-xctrace-1.txt" | tail -1)
-xcrun xctrace record --template 'Time Profiler' --device "$UDID" --attach "$pid" --time-limit 8s --output "$R/xctrace.trace" > "$R/xctrace-record.txt" 2>&1; log "xctrace rc=$? $(tail -1 "$R/xctrace-record.txt")"
+( xcrun xctrace record --template 'Time Profiler' --device "$UDID" --attach "$pid" --time-limit 8s --output "$R/xctrace.trace" > "$R/xctrace-record.txt" 2>&1; echo "rc=$?" >> "$R/xctrace-record.txt" ) &
+xp=$!; for i in $(seq 1 60); do kill -0 $xp 2>/dev/null || break; sleep 1; done
+if kill -0 $xp 2>/dev/null; then log "xctrace still running after 60 s: SIGINT"; pkill -INT -x xctrace; sleep 20; kill -0 $xp 2>/dev/null && { log "xctrace: SIGKILL"; pkill -KILL -x xctrace; }; fi
+wait $xp 2>/dev/null; log "xctrace $(tail -2 "$R/xctrace-record.txt" | tr '\n' ' ')"
 xcrun xctrace export --input "$R/xctrace.trace" --toc > "$R/xctrace-toc.xml" 2>&1
 xcrun xctrace export --input "$R/xctrace.trace" --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]' > "$P/xctrace-time-profile.xml" 2>&1
 log "xctrace export bytes=$(wc -c < "$P/xctrace-time-profile.xml")"
