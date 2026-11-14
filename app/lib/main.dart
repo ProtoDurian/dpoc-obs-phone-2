@@ -24,7 +24,7 @@ String get scenario => args['scenario'] ?? 'normal';
 String get apiBase => args['api'] ?? apiBaseDefine;
 bool faroOk = false;
 final Stopwatch sinceMain = Stopwatch();
-final int mainEpochUs = DateTime.now().microsecondsSinceEpoch;
+late final int mainEpochUs; // set as the first statement of main() (a top-level initializer would run lazily, at first use)
 
 void mark(String s) => Platform.isAndroid ? print('MMARK $s') : stdout.writeln('MMARK $s'); // Android: print -> logcat I/flutter; iOS sim: stdout
 
@@ -197,6 +197,7 @@ Map<String, num> startVals = {};
 
 Future<void> main() async {
   sinceMain.start();
+  mainEpochUs = DateTime.now().microsecondsSinceEpoch;
   WidgetsFlutterBinding.ensureInitialized();
   SchedulerBinding.instance.addTimingsCallback(frameStats.add);
   args = await native.launchArgs();

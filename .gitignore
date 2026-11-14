@@ -5,3 +5,5 @@ backend/node_modules/
 app/build/
 app/.dart_tool/
 data/
+out-*/
+local/demo-run*.txt
