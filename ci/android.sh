@@ -13,7 +13,7 @@ adb shell getprop ro.build.version.release > "$R/device.txt"; adb shell getprop 
 log "device: $(tr '\n' ' ' < "$R/device.txt")"
 
 wait_mark() { # pattern timeout_s
-  for i in $(seq 1 "$2"); do adb logcat -d -s flutter:I 2>/dev/null | grep -q "$1" && return 0; sleep 1; done; return 1
+  local k; for k in $(seq 1 "$2"); do adb logcat -d -s flutter:I 2>/dev/null | grep -q "$1" && return 0; sleep 1; done; return 1
 }
 launch() { # run_id scenario [extra am args...]
   local run=$1 sc=$2; shift 2
@@ -54,7 +54,7 @@ for sc in hang_dart hang_native; do
   launch "$sc-1" $sc
   sleep 4; adb shell input tap 300 600; adb shell input tap 300 700   # user taps during the hang (system ANR needs input)
   wait_mark "MMARK done" 90; sleep 12; save "$sc-1"
-  adb shell dumpsys activity anr > "$R/anr-dumpsys-$sc.txt" 2>&1 || true
+  adb shell dumpsys activity exit-info $PKG > "$R/exit-info-$sc.txt" 2>&1 || true
 done
 # 5. native crash, then a normal launch that reports it (Faro reads ApplicationExitInfo on next start)
 adb shell am force-stop $PKG; sleep 1
@@ -72,7 +72,7 @@ launch offline-1 normal
 sleep 20; save offline-1-during
 adb shell svc wifi enable; adb shell svc data enable
 sleep 25; save offline-1-after
-log "offline: bodies after reconnect: $(grep -c '"offline-1"' "$OUT/faro-bodies.ndjson" || true)"
+log "offline: bodies after reconnect: $(grep -c 'offline-1' "$OUT/faro-bodies.ndjson" || true)"
 # 6b. collector down while the device is online (tee answers 503), then up
 adb shell am force-stop $PKG; sleep 1
 touch "$OUT/COLLECTOR_DOWN"; launch down-1 normal; wait_mark "MMARK done" 60; sleep 4; save down-1
@@ -101,7 +101,15 @@ for cg in fp dwarf; do
   sleep 0.5
   pid=$(adb shell pidof $PKG | tr -d '\r')
   if [ "$cg" = fp ]; then cgflag="--call-graph fp"; else cgflag="-g"; fi
-  adb shell simpleperf record -p "$pid" -e cpu-clock -f 1000 $cgflag --duration 10 -o /data/local/tmp/perf-$cg.data > "$R/simpleperf-record-$cg.txt" 2>&1
+  # profileable route first (works on a user device): simpleperf --app runs via run-as/profileable
+  adb shell simpleperf record --app $PKG -e cpu-clock -f 1000 $cgflag --duration 10 -o /data/local/tmp/perf-$cg.data > "$R/simpleperf-record-$cg.txt" 2>&1
+  if ! adb shell ls /data/local/tmp/perf-$cg.data > /dev/null 2>&1; then
+    log "simpleperf $cg --app failed: $(tail -1 "$R/simpleperf-record-$cg.txt"); retry as root (emulator only)"
+    adb root > /dev/null 2>&1; sleep 3; adb shell setprop security.perf_harden 0
+    pid=$(adb shell pidof $PKG | tr -d '\r')
+    adb shell simpleperf record -p "$pid" -e cpu-clock -f 1000 $cgflag --duration 10 -o /data/local/tmp/perf-$cg.data >> "$R/simpleperf-record-$cg.txt" 2>&1
+    adb unroot > /dev/null 2>&1; sleep 3
+  fi
   adb pull /data/local/tmp/perf-$cg.data "$R/perf-$cg.data" > /dev/null 2>&1
   save "simpleperf-$cg"
   log "simpleperf $cg: $(tail -2 "$R/simpleperf-record-$cg.txt" | tr '\n' ' ') size=$(stat -c %s "$R/perf-$cg.data" 2>/dev/null)"

@@ -26,7 +26,7 @@ bool faroOk = false;
 final Stopwatch sinceMain = Stopwatch();
 final int mainEpochUs = DateTime.now().microsecondsSinceEpoch;
 
-void mark(String s) => stdout.writeln('MMARK $s'); // logcat (I/flutter) / simulator console
+void mark(String s) => Platform.isAndroid ? print('MMARK $s') : stdout.writeln('MMARK $s'); // Android: print -> logcat I/flutter; iOS sim: stdout
 
 // ---------- instrumented "poor man's profiler": exact time per call path ----------
 class Prof {
@@ -319,17 +319,17 @@ class _HomeState extends State<HomeScreen> {
         await Future<void>.delayed(const Duration(seconds: 2)); // let Faro flush first
         await native.crashNative();
       case 'hang_dart':
-        mark('scenario hang_dart: blocking the UI isolate 7 s');
+        mark('scenario hang_dart: blocking the UI isolate 12 s');
         final sw = Stopwatch()..start();
         var x = 0;
-        while (sw.elapsedMilliseconds < 7000) {
+        while (sw.elapsedMilliseconds < 12000) {
           x = (x * 31 + 7) & 0xffffff;
         }
         mark('scenario hang_dart done x=$x');
         await _reportHangs();
       case 'hang_native':
-        mark('scenario hang_native: blocking the platform main thread 7 s');
-        await native.hangNative(7000);
+        mark('scenario hang_native: blocking the platform main thread 12 s');
+        await native.hangNative(12000);
         await _reportHangs();
     }
   }

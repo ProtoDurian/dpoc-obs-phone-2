@@ -46,9 +46,13 @@ done
 
 # --- errors: extract and decode obfuscated Dart stacks ---
 bun "$ROOT/tools/extract-errors.ts" "$OUT/faro-bodies.ndjson" "$P/errors" | tee -a "$P/steps.txt"
+BID=$(readelf -n "$SYM"/app.android-x64.symbols | awk '/Build ID/{print $3}'); mkdir -p "$P/syms"; cp "$SYM"/app.android-x64.symbols "$P/syms/$BID.symbols"
+export LLVM_SYMBOLIZER=$(ls "$ANDROID_SDK_ROOT"/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-symbolizer | tail -1)
 for f in "$P"/errors/err-*.txt; do
-  if grep -q '_kDartIsolateSnapshotInstructions\|build_id' "$f"; then
-    flutter symbolize -i "$f" -d "$SYM"/app.android-x64.symbols > "${f%.txt}.decoded.txt" 2>&1 || true
+  if grep -q 'build_id' "$f"; then
+    flutter symbolize -i "$f" -d "$SYM"/app.android-x64.symbols > "${f%.txt}.flutter-symbolize.txt" 2>&1 || true
+    bun "$ROOT/tools/symbolize.ts" "$P/syms" "$f" > "${f%.txt}.decoded.txt" 2>&1 || true
+    log "decoded $(basename $f): $(head -1 "${f%.txt}.decoded.txt")"
   fi
 done
 ls "$P/errors" | head -50 > "$P/errors-list.txt"
