@@ -66,6 +66,8 @@ wait $xp 2>/dev/null; log "xctrace $(tail -2 "$R/xctrace-record.txt" | tr '\n' '
 xcrun xctrace export --input "$R/xctrace.trace" --toc > "$R/xctrace-toc.xml" 2>&1
 xcrun xctrace export --input "$R/xctrace.trace" --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]' > "$P/xctrace-time-profile.xml" 2>&1
 log "xctrace export bytes=$(wc -c < "$P/xctrace-time-profile.xml")"
+bun "$ROOT/tools/fold-xctrace.ts" "$P/xctrace-time-profile.xml" "$P/xctrace.folded" | tee -a "$R/ios-steps.txt"
+bun "$ROOT/tools/push-folded.ts" "$P/xctrace.folded" spike-shop "source=xctrace,platform=ios_sim,build_mode=$SIM_MODE" samples 1000 | tee -a "$R/ios-steps.txt"
 xcrun simctl spawn "$UDID" log show --last 15m --predicate 'process == "Runner"' --style compact > "$R/sim-os-log.txt" 2>&1 || true
 
 # --- post: errors, instrumented profile, dumps ---
