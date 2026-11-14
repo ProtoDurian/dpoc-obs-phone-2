@@ -1,0 +1,6 @@
+server:
+  http_listen_port: 4040
+memberlist:
+  bind_port: 7949
+self_profiling:
+  disable_push: true

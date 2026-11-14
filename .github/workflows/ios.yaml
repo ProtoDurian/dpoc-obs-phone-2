@@ -1,0 +1,42 @@
+name: ios
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: runs-on as JSON
+        default: '"macos-latest"'
+jobs:
+  ios:
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    timeout-minutes: 75
+    env:
+      OUT: ${{ github.workspace }}/out
+      ROOT: ${{ github.workspace }}
+      BIN: ${{ github.workspace }}/.bin
+    steps:
+      - uses: actions/checkout@v4
+      - name: facts
+        run: mkdir -p $OUT/raw; echo "T0=$(date +%s)" >> $GITHUB_ENV; { sysctl -n hw.ncpu; sysctl -n hw.memsize; df -h / | tail -1; } | tee $OUT/raw/runner-facts.txt
+      - uses: oven-sh/setup-bun@v2
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: "3.47.4", channel: stable, cache: true }
+      - name: stores + backend
+        run: bash stack/start.sh 2>&1 | tee $OUT/raw/stack-start.txt
+      - name: simulator run
+        run: bash ci/ios.sh
+      - name: time
+        if: always()
+        run: echo "job_seconds_to_here=$(( $(date +%s) - T0 ))" | tee $OUT/raw/job-time.txt
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-out
+          path: |
+            out/raw
+            out/post
+            out/arrived
+            out/logs
+            out/*.ndjson
+            app/build/sym
+            app/build/sym-device

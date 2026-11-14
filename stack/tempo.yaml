@@ -1,0 +1,23 @@
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9097
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4418
+live_store:
+  shutdown_marker_dir: ${DATA}/tempo/live-store/shutdown-marker
+  wal:
+    path: ${DATA}/tempo/live-store/traces
+block_builder:
+  wal:
+    path: ${DATA}/tempo/block-builder/traces
+storage:
+  trace:
+    backend: local
+    local:
+      path: ${DATA}/tempo/traces
+    wal:
+      path: ${DATA}/tempo/wal
