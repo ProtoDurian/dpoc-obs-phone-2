@@ -13,7 +13,7 @@ flutter pub get > /dev/null
 # --- which build modes can run on the Simulator? ---
 for mode in release profile debug; do
   s=$(date +%s)
-  if [ $mode = release ]; then extra="--obfuscate --split-debug-info=build/sym"; else extra=""; fi
+  if [ $mode = release ]; then mkdir -p build/sym; extra="--obfuscate --split-debug-info=build/sym --extra-gen-snapshot-options=--save-obfuscation-map=build/sym/obfuscation-map.json"; else extra=""; fi
   flutter build ios --simulator --$mode $extra --build-name 1.2.0 --build-number 12 > "$R/build-sim-$mode.txt" 2>&1; rc=$?
   log "build ios --simulator --$mode rc=$rc s=$(( $(date +%s) - s )) :: $(tail -2 "$R/build-sim-$mode.txt" | tr '\n' ' ' | cut -c1-200)"
   if [ $rc = 0 ]; then SIM_MODE=$mode; break; fi
@@ -21,7 +21,7 @@ done
 APP=$(ls -d build/ios/iphonesimulator/Runner.app 2>/dev/null)
 # device release build (no signing): what a store build carries (obfuscated, split symbols, dSYMs)
 s=$(date +%s)
-flutter build ios --release --no-codesign --obfuscate --split-debug-info=build/sym-device --build-name 1.2.0 --build-number 12 > "$R/build-device-release.txt" 2>&1
+mkdir -p build/sym-device; flutter build ios --release --no-codesign --obfuscate --split-debug-info=build/sym-device --extra-gen-snapshot-options=--save-obfuscation-map=build/sym-device/obfuscation-map.json --build-name 1.2.0 --build-number 12 > "$R/build-device-release.txt" 2>&1
 log "build ios --release --no-codesign rc=$? s=$(( $(date +%s) - s ))"
 { ls -la build/sym-device build/sym 2>/dev/null; find build/ios -name '*.dSYM' -maxdepth 4; du -sh build/ios/iphoneos/Runner.app 2>/dev/null; } > "$R/ios-build-artifacts.txt" 2>&1
 

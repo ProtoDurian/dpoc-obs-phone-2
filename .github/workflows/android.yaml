@@ -32,13 +32,13 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { flutter-version: "3.47.4", channel: stable, cache: true }
       - name: stores + backend
-        run: bash stack/start.sh 2>&1 | tee $OUT/raw/stack-start.txt
+        run: bash stack/start.sh > $OUT/raw/stack-start.txt 2>&1 < /dev/null; cat $OUT/raw/stack-start.txt
       - name: build release (obfuscated) + profile
         working-directory: app
         run: |
           s=$(date +%s)
-          flutter pub get
-          flutter build apk --release --obfuscate --split-debug-info=build/sym --target-platform android-x64 --build-name 1.2.0 --build-number 12 2>&1 | tail -5
+          flutter pub get; mkdir -p build/sym
+          flutter build apk --release --obfuscate --split-debug-info=build/sym --extra-gen-snapshot-options=--save-obfuscation-map=build/sym/obfuscation-map.json --target-platform android-x64 --build-name 1.2.0 --build-number 12 2>&1 | tail -5
           r=$(date +%s)
           flutter build apk --profile --target-platform android-x64 --build-name 1.2.0 --build-number 12 2>&1 | tail -3
           e=$(date +%s)
