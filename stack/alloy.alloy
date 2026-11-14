@@ -19,6 +19,12 @@ faro.receiver "apps" {
     listen_port              = 12347
     cors_allowed_origins     = ["*"]
     max_allowed_payload_size = "5MiB"
+    // default is ONE global bucket of 50 req/s, burst 100, for all clients together (replay and real fleets hit it)
+    rate_limiting {
+      enabled    = true
+      rate       = 2000
+      burst_size = 4000
+    }
   }
   output {
     logs   = [loki.write.faro.receiver]

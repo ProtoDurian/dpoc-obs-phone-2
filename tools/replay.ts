@@ -14,7 +14,7 @@ const groups = new Map<string, { type: string; top: string; n: number }>();
 
 const norm = (s: string) => s.replace(/[0-9a-f]{8,}/gi, "#").replace(/\d+/g, "N").slice(0, 120);
 async function enrich(ex: any) {
-  const frames: any[] = ex.stacktrace?.frames ?? [];
+  const frames: any[] = Array.isArray(ex.stacktrace?.frames) ? ex.stacktrace.frames : [];
   const raw = frames.map((f) => f.function ?? "").join("\n") || ex.context?.["error.stack_raw"] || "";
   ex.context ??= {};
   let group = "", top = "";

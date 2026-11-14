@@ -33,13 +33,13 @@ for d in "$PH"/out-android*/android-out/out; do
   push "$d/post/simpleperf-dwarf.folded" spike-shop "source=simpleperf_dwarf,platform=android,build_mode=release" samples 1000
 done
 for d in "$PH"/out-ios*/ios-out/out; do
-  push "$d/post/sample-ios.folded" spike-shop "source=macos_sample,platform=ios_sim,build_mode=debug" samples 1000
+  grep -i "main-thread" "$d/post/sample-ios.folded" > "$d/post/sample-ios-main.folded"; push "$d/post/sample-ios-main.folded" spike-shop "source=macos_sample,platform=ios_sim,build_mode=debug" samples 1000
   push "$d/post/xctrace.folded" spike-shop "source=xctrace,platform=ios_sim,build_mode=debug" samples 1000
 done
 for f in $FARO; do
   plat=$(echo "$f" | grep -q out-ios && echo ios_sim || echo android)
   jq -r '.body | fromjson? | .events[]? | select(.name=="prof_folded") | .attributes.folded' "$f" > "$OUT/app-prof-$plat.folded"
-  push "$OUT/app-prof-$plat.folded" spike-shop "source=app_instrumented,platform=$plat" microseconds
+  push "$OUT/app-prof-$plat.folded" spike-shop "source=app_instrumented,platform=$plat" samples 1000000  # values are microseconds
 done
 sleep 20  # let Loki/Tempo flush to queryable state
 
